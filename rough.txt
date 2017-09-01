@@ -1,0 +1,14 @@
+
+
+# cv2.imshow('mask', img)
+# cv2.imshow('new_mask', new_img)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+for i in range(50):
+    print img[i]
+    print ""
+print "=========================================="
+for i in range(50):
+    print newimg[i]
+    print ""
+return

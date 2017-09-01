@@ -1,0 +1,10 @@
+lower_green = np.array([80,50,30])
+upper_green = np.array([255,255,255])
+
+
+#blurred
+ lower_green = np.array([80,50,50])
+    upper_green = np.array([255,255,255])
+
+    160, 30 , 20
+    190, 100, 200

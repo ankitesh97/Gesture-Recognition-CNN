@@ -1,0 +1,25 @@
+
+
+{
+  "preprocess":{
+    "cmt":"params related to preprocessing",
+    "BASE":"images_data/",
+    "n_types":5,
+    "FIST":"images_data/fist/",
+    "HAND":"images_data/hand/",
+    "ONE":"images_data/one/",
+    "PEACE":"images_data/peace/",
+    "NONE":"images_data/none/",
+    "train":0.7,
+    "test":0.2,
+    "validation":0.1
+
+  },
+
+  "input_dim":{ "val":[50,50], "cmt":"input image dimension row X cols this can't be changed" },
+  "n_padding_bits":{"val":3, "cmt":"number of padding layers, can be changed the image is padded with 0"},
+  "n_filter_layer_1":{"val":4, "cmt":"number of filters in cnn layer 1, dynamic"},
+  "filter_size_layer_1":{"val":[7,7], "cmt":"dimension of filter in layer 1, by default 7x7 can be changed "},
+  "filter_stride":{"val":1, "cmt":"moving stride try keeping it fix, but if wished to change then make sure that the conv operation output should have the integral dimension using the formula"}
+
+}
