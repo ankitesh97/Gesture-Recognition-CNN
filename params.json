@@ -20,6 +20,14 @@
   "n_padding_bits":{"val":3, "cmt":"number of padding layers, can be changed the image is padded with 0"},
   "n_filter_layer_1":{"val":4, "cmt":"number of filters in cnn layer 1, dynamic"},
   "filter_size_layer_1":{"val":[7,7], "cmt":"dimension of filter in layer 1, by default 7x7 can be changed "},
-  "filter_stride":{"val":1, "cmt":"moving stride try keeping it fix, but if wished to change then make sure that the conv operation output should have the integral dimension using the formula"}
+  "filter_stride":{"val":1, "cmt":"moving stride try keeping it fix, but if wished to change then make sure that the conv operation output should have the integral dimension using the formula"},
+  "mean":0,
+  "std":0.01,
+  "pooling_stride_layer_1":{"val":2,"cmt":"if changed make sure of the dimension"},
+  "pooling_filter_size_layer_1":{"val":[2,2],"cmt":"pooling size, change it if sure of dimensions"},
+  "n_filter_layer_2":{"val":3,"cmt":"can be changed"},
+  "filter_size_layer_2":{"val":[3,3],"cmt":"#filters in layer 2 can be changed"},
+  "pooling_stride_layer_2":{"val":1},
+  "pooling_filter_size_layer_2":{"val":[2,2]}
 
 }
