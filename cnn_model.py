@@ -15,7 +15,7 @@ params_file.close()
 class CNN:
 
     def __init__(self):
-        self.obj = preProcess() #this will return all images i.e X values and the expected output
+        self.obj = Preprocess() #this will return all images i.e X values and the expected output
         #layer 1 params
         self.input_dim = params['input_dim']['val']
         self.n_padding_bits = params['n_padding_bits']['val']
@@ -30,12 +30,12 @@ class CNN:
         self.bias_layer_1 = []
         #layer 2 params
         self.n_filter_layer_2 = params['n_filter_layer_2']["val"]
-        self.filter_size_layer_2 = tuple(self.n_filter_layer_1,params['filter_size_layer_2']['val'][0],params['filter_size_layer_2']['val'][1])
+        self.filter_size_layer_2 = tuple([self.n_filter_layer_1,params['filter_size_layer_2']['val'][0],params['filter_size_layer_2']['val'][1]])
         self.filters_layer_2 = []
         self.bias_layer_2 = []
         tmp_dim = (self.pooling_layer_1_out_dim[0] - self.filter_size_layer_2[1])/self.filter_stride + 1 #by default this will be 23*23
         self.conv_op_layer_2_out_dim =  [tmp_dim,tmp_dim]
-        tmp_dim_pooling = (temp_dim - params['pooling_filter_size_layer_2']['val'][0])/params["pooling_stride_layer_2"]["val"] + 1
+        tmp_dim_pooling = (tmp_dim - params['pooling_filter_size_layer_2']['val'][0])/params["pooling_stride_layer_2"]["val"] + 1
         self.pooling_layer_2_out_dim = [tmp_dim_pooling,tmp_dim_pooling] #by default 22
         self.out_nodes_after_conv = self.pooling_layer_2_out_dim[0]*self.pooling_layer_2_out_dim[1]*self.n_filter_layer_2 #1452 by defailt
         #fully connected layers
@@ -49,13 +49,15 @@ class CNN:
 
 
     def train(self):
+        self.obj = self.obj.process()
         X_train,y_train = self.obj.X_train, self.obj.y_train
         X_train = self.padBits(X_train,self.n_padding_bits) #will return the all images after padding
         #make random weights i.e filters
-        randomFilterValues()
-        for img_index in len(X_train):
+        self.randomFilterValues()
+        for img_index in range(len(X_train)):
             output = self.feedForward(X_train[img_index],y_train[img_index],training=True)
-
+            print output
+            return
 
 
     @staticmethod
@@ -67,20 +69,18 @@ class CNN:
         return X
 
 
-    def randomFilterValues(self,layer):
+    def randomFilterValues(self):
         mean = params["mean"]
         std = params["std"]
         #for conv layer box
-        if layer == 1:
-            self.bias_layer_1 = list(np.random.normal(mean,0.00001,self.n_filter_layer_1)+1)
-            #filter values for layer 1
-            for i in range(self.n_filter_layer_1):
-                self.filters_layer_1.append(np.random.normal(mean,std,tuple(self.filter_size_layer_1)))
-                #filter values for layer 2
-        else:
-            self.bias_layer_2 = list(np.random.normal(mean,0.00001,self.n_filter_layer_2)+1)
-            for i in range(self.n_filter_layer_2):
-                self.filters_layer_2.append(np.random.normal(mean,std,self.filter_size_layer_2))
+        self.bias_layer_1 = list(np.random.normal(mean,0.00001,self.n_filter_layer_1)+1)
+        #filter values for layer 1
+        for i in range(self.n_filter_layer_1):
+            self.filters_layer_1.append(np.random.normal(mean,std,tuple(self.filter_size_layer_1)))
+            #filter values for layer 2
+        self.bias_layer_2 = list(np.random.normal(mean,0.00001,self.n_filter_layer_2)+1)
+        for i in range(self.n_filter_layer_2):
+            self.filters_layer_2.append(np.random.normal(mean,std,self.filter_size_layer_2))
         #for fully connected layers
         # +1 for bias
         shape_weight_layer_1 = (self.n_nodes_hidden_layer_1,self.out_nodes_after_conv+1)
@@ -112,15 +112,16 @@ class CNN:
         if(training):
             X = self.dropout(X,self.dropout_percent_layer_1)
 
-        X = self.fullConnected(X,layer=2)
+        X = self.fullyConnected(X,layer=2)
         X = self.relu(X)
         X = self.flattenLayer(X) #add one as bias
         if(training):
             X = self.dropout(X,self.dropout_percent_layer_2)
 
-        X = self.flattenLayer(X,layer=3)
+        X = self.fullyConnected(X,layer=3)
         #now X contains the output now have to just squash the stuff
         X = self.softmax(X)
+        return X
 
 
 
@@ -153,7 +154,7 @@ class CNN:
                 #ADD BIAS
                 convolved_in_2d_plane += self.bias_layer_2[i]
                 i += 1
-                convolved_img.append(convolved_2d_plane)
+                convolved_img.append(convolved_in_2d_plane)
 
             convolved = np.dstack(convolved_img)
             return np.rollaxis(convolved,-1)
@@ -161,14 +162,15 @@ class CNN:
     @staticmethod
     def convOp(X, kernel, x_dim, kernel_dim, output_dim):
         #to make the dimension equal
-        padded_dim = x_dim + kernel_dim - 1
+        padded_dim = np.array(x_dim) + np.array(kernel_dim) - 1
+        output_dim = np.array(output_dim)
         #applying convolution theorem
         fft_result = np.fft.fft2(X, padded_dim) * np.fft.fft2(kernel, padded_dim)
         target = np.fft.ifft2(fft_result).real
 
         #now to extract the convolution
         #here convolution is correlation with the flipped filter
-        start_i = (padded_dim - output_dim) // 2
+        start_i = (padded_dim -output_dim ) // 2
         end_i = start_i + output_dim
         convolution = target[start_i[0]:end_i[0], start_i[1]:end_i[1]]
         return convolution
@@ -226,14 +228,14 @@ class CNN:
         if(curr_y == cols-1):
             return curr_x + 1, 0
         else:
-            curr_x,curr_y+1
+            return curr_x,curr_y+1
 
     @staticmethod
     def flattenLayer(X):
         # also add bias
         return np.insert(X.flatten(),0,1)
 
-    def fullConnected(self,layer):
+    def fullyConnected(self,X,layer):
         Z = np.dot(self.weights[layer-1],X)
         return Z
 
@@ -250,4 +252,3 @@ class CNN:
 if __name__ == '__main__':
     cnn = CNN()
     cnn.train()
-    print cnn.X

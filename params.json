@@ -36,7 +36,4 @@
   "dropout_percent_layer_2":{"val":0.5, "cmt":"dropout percentage of layer 2 i.e nodes in hidden layer 2"},
   "output_classes":{"val":5}
 
-
-
-
 }
