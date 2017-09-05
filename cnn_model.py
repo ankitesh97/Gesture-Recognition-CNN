@@ -35,6 +35,18 @@ class CNN:
         self.bias_layer_2 = []
         tmp_dim = (self.pooling_layer_1_out_dim[0] - self.filter_size_layer_2[1])/self.filter_stride + 1 #by default this will be 23*23
         self.conv_op_layer_2_out_dim =  [tmp_dim,tmp_dim]
+        tmp_dim_pooling = (temp_dim - params['pooling_filter_size_layer_2']['val'][0])/params["pooling_stride_layer_2"]["val"] + 1
+        self.pooling_layer_2_out_dim = [tmp_dim_pooling,tmp_dim_pooling] #by default 22
+        self.out_nodes_after_conv = self.pooling_layer_2_out_dim[0]*self.pooling_layer_2_out_dim[1]*self.n_filter_layer_2 #1452 by defailt
+        #fully connected layers
+        self.n_hidden_layers = params['n_hidden_layers']["val"]
+        self.weights = [] #will contain the weights of the network total 3
+        self.n_nodes_hidden_layer_1 = params["n_nodes_hidden_layer_1"]["val"]
+        self.n_nodes_hidden_layer_2 = params["n_nodes_hidden_layer_2"]["val"]
+        self.output_classes = params["output_classes"]["val"]
+        self.dropout_percent_layer_1 = params["dropout_percent_layer_1"]["val"]
+        self.dropout_percent_layer_2 = params["dropout_percent_layer_2"]["val"]
+
 
     def train(self):
         X_train,y_train = self.obj.X_train, self.obj.y_train
@@ -42,7 +54,7 @@ class CNN:
         #make random weights i.e filters
         randomFilterValues()
         for img_index in len(X_train):
-            output = self.feedForward(X_train[img_index],y_train[img_index])
+            output = self.feedForward(X_train[img_index],y_train[img_index],training=True)
 
 
 
@@ -58,6 +70,7 @@ class CNN:
     def randomFilterValues(self,layer):
         mean = params["mean"]
         std = params["std"]
+        #for conv layer box
         if layer == 1:
             self.bias_layer_1 = list(np.random.normal(mean,0.00001,self.n_filter_layer_1)+1)
             #filter values for layer 1
@@ -68,9 +81,18 @@ class CNN:
             self.bias_layer_2 = list(np.random.normal(mean,0.00001,self.n_filter_layer_2)+1)
             for i in range(self.n_filter_layer_2):
                 self.filters_layer_2.append(np.random.normal(mean,std,self.filter_size_layer_2))
+        #for fully connected layers
+        # +1 for bias
+        shape_weight_layer_1 = (self.n_nodes_hidden_layer_1,self.out_nodes_after_conv+1)
+        shape_weight_layer_2 = (self.n_nodes_hidden_layer_2,self.n_nodes_hidden_layer_1+1)
+        shape_weight_layer_3 = (self.output_classes,self.n_nodes_hidden_layer_2+1)
+        self.weights.append(np.random.normal(mean,std,shape_weight_layer_1))
+        self.weights.append(np.random.normal(mean,std,shape_weight_layer_2))
+        self.weights.append(np.random.normal(mean,std,shape_weight_layer_3))
+
 
     #this function does a feed forward
-    def feedForward(self, X, y):
+    def feedForward(self, X, y,training):
         #layer 1
         X = self.convulationOp(X,layer=1) # 50X50X4
         X = self.relu(X)
@@ -81,8 +103,24 @@ class CNN:
         X,max_indexes_x_layer_2,max_indexes_y_layer_2 = self.maxPooling(X,params["pooling_stride_layer_2"]["val"],params["pooling_filter_size_layer_2"]["val"])
         # now i have total 22 X 22 X 3 image there total neurons = 1452
         #fully connected
+        X = self.flattenLayer(X) #this flattens the layer to make a column vector and adds 1 as a bias
+        X = self.fullyConnected(X,layer=1)
+        X = self.relu(X)
+        #at the 1st hidden layer
+        X = self.flattenLayer(X) #add one as bias
+        #perform dropout
+        if(training):
+            X = self.dropout(X,self.dropout_percent_layer_1)
 
+        X = self.fullConnected(X,layer=2)
+        X = self.relu(X)
+        X = self.flattenLayer(X) #add one as bias
+        if(training):
+            X = self.dropout(X,self.dropout_percent_layer_2)
 
+        X = self.flattenLayer(X,layer=3)
+        #now X contains the output now have to just squash the stuff
+        X = self.softmax(X)
 
 
 
@@ -190,6 +228,24 @@ class CNN:
         else:
             curr_x,curr_y+1
 
+    @staticmethod
+    def flattenLayer(X):
+        # also add bias
+        return np.insert(X.flatten(),0,1)
+
+    def fullConnected(self,layer):
+        Z = np.dot(self.weights[layer-1],X)
+        return Z
+
+    @staticmethod
+    def dropout(X,p):
+        mask = np.random.binomial(1,p,X.shape)
+        return X*mask
+
+    @staticmethod
+    def softmax(X):
+        expo = np.exp(X)
+        return expo/np.sum(expo,axis=0)
 
 if __name__ == '__main__':
     cnn = CNN()

@@ -28,6 +28,15 @@
   "n_filter_layer_2":{"val":3,"cmt":"can be changed"},
   "filter_size_layer_2":{"val":[3,3],"cmt":"#filters in layer 2 can be changed"},
   "pooling_stride_layer_2":{"val":1},
-  "pooling_filter_size_layer_2":{"val":[2,2]}
+  "pooling_filter_size_layer_2":{"val":[2,2]},
+  "n_hidden_layers":{"val":2, "cmt":"can't be changed"},
+  "n_nodes_hidden_layer_1":{"val":700,"cmt":"can be changed currently half of the input"},
+  "n_nodes_hidden_layer_2":{"val":350,"cmt":"can be changed, currently half of the previous layer"},
+  "dropout_percent_layer_1":{"val":0.25, "cmt":"dropout percentage of layer 1 i.e nodes in hidden layer"},
+  "dropout_percent_layer_2":{"val":0.5, "cmt":"dropout percentage of layer 2 i.e nodes in hidden layer 2"},
+  "output_classes":{"val":5}
+
+
+
 
 }
