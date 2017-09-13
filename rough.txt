@@ -12,3 +12,120 @@ for i in range(50):
     print newimg[i]
     print ""
 return
+
+
+
+def backprop(self,theta,X,y):
+    if self.count%20 == 0:
+        print "-------------------------------------------------------"
+        print(str(self.count)+" times the function is called time taken in seconds "+str(time.time()-start) )
+        print "-------------------------------------------------------"
+    self.count += 1
+
+    #this function will make from one d to weights
+    self.fromThetaVectorToWeights(theta) #now all weights loaded in the self object
+    J = 0
+    #initialze grad matrix
+    weight_layer_3_grads = np.zeros(self.weights[LAYER_3].shape)
+    weight_layer_2_grads = np.zeros(self.weights[LAYER_2].shape)
+    weight_layer_1_grads = np.zeros(self.weights[LAYER_1].shape)
+    kernel_layer_2_grads = [np.zeros(self.filter_size_layer_2) for k in range(self.n_filter_layer_2)]
+    kernel_layer_1_grads = np.zeros((self.n_filter_layer_1,self.filter_size_layer_1[0],self.filter_size_layer_1[1]))
+    bias_layer_2_grads = np.zeros((self.n_filter_layer_2))
+    bias_layer_1_grads = np.zeros((self.n_filter_layer_1))
+
+    #for all image
+    for im_index in range(len(X)):
+        X_curr = X[im_index]
+        y_curr = y[im_index]
+        layer_1_conv_box, layer_1_pooling, layer_2_conv_box, layer_2_pooling, fully_connected  = self.feedForward(X_curr,y_curr,training=True) #out vector
+        a_last_layer = fully_connected['a3']
+        loss_curr = self.softmaxLoss(a_last_layer,y_curr)
+        J += loss_curr
+        #backprop in neural network
+        # last layer error for softmax function and log likelihood
+        d3 = (a_last_layer - y_curr).flatten()
+        #update weight error matrix make a coulmn vector and multiply
+        a2 = fully_connected['a2']
+        weight_layer_3_grads += d3.reshape((d3.shape[0],1)) * a2
+        #propogate the error
+        z2 = fully_connected['z2']
+        d2 = (np.dot(self.weights[LAYER_3].T,d3) * self.reluDerivative(z2))[1:] #350 X 1
+        a1 = fully_connected['a1']
+        weight_layer_2_grads += d2.reshape((d2.shape[0],1)) * a1
+        # 1st hidden layer error
+        z1 = fully_connected['z1']
+        d1 = (np.dot(self.weights[LAYER_2].T,d2) * self.reluDerivative(z1))[1:]
+        a0 = fully_connected['a0']
+        weight_layer_1_grads += d1.reshape((d1.shape[0],1)) * a0
+        z0 = fully_connected['z0']
+        # error in the input layer i,e the layer after the convnet box
+        d0 = (np.dot(self.weights[LAYER_1].T,d1) * self.reluDerivative(z0))[1:] #since the 1st is bias
+        # now propogate to convnet layer
+        # X_max_pooling_layer_2 this is nd matrix which contains last layer pixels
+        # X_relu_layer_2 will contain relu layer pixels
+        # max_x_pooling_layer_2,max_y_pooling_layer_2
+        X_max_pooling_layer_2 = layer_2_pooling['pooling_val']
+        X_relu_layer_2 = layer_2_conv_box['relu']
+        d_pooling_layer_2 = d0.reshape(X_max_pooling_layer_2.shape)
+        d_relu_layer_2 = np.zeros(X_relu_layer_2.shape)
+        #for each channel
+        max_x_pooling_layer_2 = layer_2_pooling['max_indexes_x']
+        max_y_pooling_layer_2 = layer_2_pooling['max_indexes_y']
+        for ch in range(d_relu_layer_2.shape[0]):
+            d_relu_layer_2[ch,max_x_pooling_layer_2[ch],max_y_pooling_layer_2[ch]] = d_pooling_layer_2[ch]
+
+        conv_layer_1_pooling_op = layer_1_pooling['pooling_val']
+        #rotate dell and apply covolution with the previous layer output to get the errors
+        conv_layer_1_pooling_op_shape = conv_layer_1_pooling_op[0].shape
+        for kernel in range(self.n_filter_layer_2):
+            rotated_dell = np.flip(np.flip(d_relu_layer_2[kernel],0),1)
+            bias_layer_2_grads[kernel] += np.sum(rotated_dell)
+            grads_for_kernel = []
+            for ch in range(conv_layer_1_pooling_op.shape[0]):
+                grads = self.convOp(conv_layer_1_pooling_op[ch],rotated_dell,conv_layer_1_pooling_op_shape,rotated_dell.shape,self.filter_size_layer_2[1:])
+                grads_for_kernel.append(grads)
+            grads_for_kernel = np.dstack(grads_for_kernel)
+            grads_for_kernel = np.rollaxis(grads_for_kernel,-1)
+            kernel_layer_2_grads[kernel] += grads_for_kernel
+
+        #at this point we have all grads for all kernel of conv layer 2, now we have to propogate error backwards
+        dell_pooled_layer_1 = np.zeros(conv_layer_1_pooling_op.shape)
+        for kernel in range(self.n_filter_layer_2):
+            dell2 = d_relu_layer_2[kernel]
+            filter_curr = self.filters_layer_2[kernel]
+            for ch in range(dell_pooled_layer_1.shape[0]):
+                 filter_ch_curr = filter_curr[ch]
+                 flipped_filter_ch_curr  = np.flip(np.flip(filter_ch_curr,0),1)
+                 val_change_curr_ch = self.convOp(flipped_filter_ch_curr,dell2,flipped_filter_ch_curr.shape,dell2.shape,-1,"full")
+                 dell_pooled_layer_1[ch] += val_change_curr_ch
+
+        dell_pooling_layer_1 = dell_pooled_layer_1 * self.reluDerivative(conv_layer_1_pooling_op)
+        #at this point i have all the dell in the maxed_pooled layer now to propogate to layer before it
+        X_relu_layer_1 = layer_1_conv_box['relu']
+        dell_relu_layer_1 = np.zeros(X_relu_layer_1.shape)
+        max_x_pooling_layer_1 = layer_1_pooling['max_indexes_x']
+        max_y_pooling_layer_1 = layer_1_pooling['max_indexes_y']
+        for ch in range(dell_relu_layer_1.shape[0]):
+            dell_relu_layer_1[ch,max_x_pooling_layer_1[ch],max_y_pooling_layer_1[ch]] = dell_pooling_layer_1[ch]
+
+        #now to get change in weights
+        for kernel in range(self.n_filter_layer_1):
+            rotated_dell = np.flip(np.flip(dell_relu_layer_1[kernel],0),1)
+            bias_layer_1_grads[kernel] += np.sum(rotated_dell)
+            grads = self.convOp(X_curr,rotated_dell,self.input_dim,rotated_dell.shape,self.filter_size_layer_1)
+            kernel_layer_1_grads[kernel] += grads
+
+
+    # at this point all the grads are calculated now just to stack it up into 1d array
+    #will stack up in forward fashion
+    all_grads = np.array([])
+    # 1 st conv layer all kernel's biases, all_kernels
+    all_grads = np.concatenate((all_grads,bias_layer_1_grads,kernel_layer_1_grads.flatten()))
+    #2nd conv layer params
+    all_grads = np.concatenate((all_grads,bias_layer_2_grads,np.array(kernel_layer_2_grads).flatten()))
+    #fully connected now
+    all_grads = np.concatenate((all_grads, weight_layer_1_grads.flatten(), weight_layer_2_grads.flatten(),weight_layer_3_grads.flatten()))
+
+
+    return J, all_grads
