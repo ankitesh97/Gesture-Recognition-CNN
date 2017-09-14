@@ -439,7 +439,7 @@ class CNN:
 
         #for all image
         num_cores = multiprocessing.cpu_count()
-        ite = [delayed(backpropBodyParllel)(self,X[im_index],y[im_index]) for im_index in range(5))]
+        ite = [delayed(backpropBodyParllel)(self,X[im_index],y[im_index]) for im_index in range(5)]
         all_return_values = Parallel(n_jobs=num_cores)(ite)
 
         J = 0
