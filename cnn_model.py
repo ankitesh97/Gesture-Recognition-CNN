@@ -412,7 +412,7 @@ class CNN:
         pass
 
     def gradientDescent(self,theta,X,y):
-        fmin = fmin_tnc(func=self.backprop,x0=theta,args=(X,y),maxfun=10)
+        fmin = fmin_tnc(func=self.backprop,x0=theta,args=(X,y),maxfun=200)
         return fmin
 
 
@@ -439,7 +439,7 @@ class CNN:
 
         #for all image
         num_cores = multiprocessing.cpu_count()
-        ite = [delayed(backpropBodyParllel)(self,X[im_index],y[im_index]) for im_index in range(5)]
+        ite = [delayed(backpropBodyParllel)(self,X[im_index],y[im_index]) for im_index in range(len(X))]
         all_return_values = Parallel(n_jobs=num_cores)(ite)
 
         J = 0
