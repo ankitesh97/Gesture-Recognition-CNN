@@ -34,6 +34,7 @@
   "n_nodes_hidden_layer_2":{"val":350,"cmt":"can be changed, currently half of the previous layer"},
   "dropout_percent_layer_1":{"val":0.25, "cmt":"dropout percentage of layer 1 i.e nodes in hidden layer"},
   "dropout_percent_layer_2":{"val":0.5, "cmt":"dropout percentage of layer 2 i.e nodes in hidden layer 2"},
-  "output_classes":{"val":5}
+  "output_classes":{"val":5},
+  "batch_size":300
 
 }

@@ -222,7 +222,7 @@ class CNN:
         X,max_indexes_x, max_indexes_y = self.maxPooling(X,params["pooling_stride_layer_1"]["val"],params["pooling_filter_size_layer_1"]["val"])
         layer_1_pooling["pooling_val"] = X
         layer_1_pooling["max_indexes_x"] = max_indexes_x
-        layer_1_pooling["max_indexes_y"] = max_indexes_x
+        layer_1_pooling["max_indexes_y"] = max_indexes_y
 
         #layer 2
         layer_2_conv_box = {}
@@ -417,14 +417,17 @@ class CNN:
 
 
 
-
     def backprop(self,theta,X,y):
         if self.count%20 == 0:
             print "-------------------------------------------------------"
             print(str(self.count)+" times the function is called time taken in seconds "+str(time.time()-start) )
             print "-------------------------------------------------------"
         self.count += 1
-
+        batch_co = np.random.choice(X.shape[0],size=params['batch_size'],replace=False)
+        # X_batch =
+        X = X[batch_co,:]
+        y = y[batch_co,:]
+        print len(X)
         #this function will make from one d to weights
         self.fromThetaVectorToWeights(theta) #now all weights loaded in the self object
         J = 0
