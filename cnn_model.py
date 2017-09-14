@@ -172,7 +172,7 @@ class CNN:
         # print theta, len(theta)
         print "training starting"
         params = self.gradientDescent(theta,X_train,y_train)
-        self.fromThetaVectorToWeights(params)
+        self.fromThetaVectorToWeights(params[0])
         #pickle the object
 
 
@@ -412,7 +412,7 @@ class CNN:
         pass
 
     def gradientDescent(self,theta,X,y):
-        fmin = fmin_tnc(func=self.backprop,x0=theta,args=(X,y),maxfun=100)
+        fmin = fmin_tnc(func=self.backprop,x0=theta,args=(X,y),maxfun=10)
         return fmin
 
 
@@ -439,16 +439,14 @@ class CNN:
 
         #for all image
         num_cores = multiprocessing.cpu_count()
-        ite = [delayed(backpropBodyParllel)(self,X[im_index],y[im_index]) for im_index in range(len(X))]
+        ite = [delayed(backpropBodyParllel)(self,X[im_index],y[im_index]) for im_index in range(5))]
         all_return_values = Parallel(n_jobs=num_cores)(ite)
 
         J = 0
-        all_grads = np.shape(all_return_values[1].shape)
+        all_grads = np.zeros(all_return_values[0][1].shape)
         for i in range(len(all_return_values)):
-            if i%2==0:
-                J += all_return_values[i]
-            else:
-                all_grads += all_return_values[i]
+            J += all_return_values[i][0]
+            all_grads += all_return_values[i][1]
 
 
         return J, all_grads
@@ -463,6 +461,7 @@ class CNN:
         prev = self.n_filter_layer_1
         for i in range(self.n_filter_layer_1):
             get_curr_filter = theta[prev:prev+elements_in_filter_1]
+            # print get_curr_filter
             self.filters_layer_1.append(np.reshape(get_curr_filter,self.filter_size_layer_1))
             prev = prev + elements_in_filter_1
 
