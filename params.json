@@ -4,7 +4,7 @@
   "preprocess":{
     "cmt":"params related to preprocessing",
     "BASE":"images_data/",
-    "n_types":5,
+    "n_types":4,
     "FIST":"images_data/fist/",
     "HAND":"images_data/hand/",
     "ONE":"images_data/one/",
@@ -34,7 +34,8 @@
   "n_nodes_hidden_layer_2":{"val":350,"cmt":"can be changed, currently half of the previous layer"},
   "dropout_percent_layer_1":{"val":0.25, "cmt":"dropout percentage of layer 1 i.e nodes in hidden layer"},
   "dropout_percent_layer_2":{"val":0.5, "cmt":"dropout percentage of layer 2 i.e nodes in hidden layer 2"},
-  "output_classes":{"val":5},
-  "batch_size":300
+  "output_classes":{"val":4},
+  "batch_size":5,
+  "pool_size":1
 
 }
