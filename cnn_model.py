@@ -18,6 +18,7 @@ LAYER_2 = 1
 LAYER_3 = 2
 start = time.time()
 
+
 def backpropBodyParllel(self,X_pool,y_pool):
 
     weight_layer_3_grads = np.zeros(self.weights[LAYER_3].shape)
@@ -30,13 +31,16 @@ def backpropBodyParllel(self,X_pool,y_pool):
     #get the batches
     J = 0
     for im_index in range(len(X_pool)):
+        # print "im_index "+str(im_index)
+        # raw_input()
         X_curr = X_pool[im_index]
         y_curr = y_pool[im_index]
-        layer_1_conv_box, layer_1_pooling, layer_2_conv_box, layer_2_pooling, fully_connected  = self.feedForward(X_curr,y_curr,training=True) #out vector
+        layer_1_conv_box, layer_1_pooling, layer_2_conv_box, layer_2_pooling, fully_connected  = self.feedForward(X_curr,y_curr,training=False) #out vector
         a_last_layer = fully_connected['a3']
         loss_curr = self.softmaxLoss(a_last_layer,y_curr)
         J += loss_curr
         #backprop in neural network
+
         # last layer error for softmax function and log likelihood
         d3 = (a_last_layer - y_curr).flatten()
         #update weight error matrix make a coulmn vector and multiply
@@ -69,9 +73,9 @@ def backpropBodyParllel(self,X_pool,y_pool):
         for ch in range(d_relu_layer_2.shape[0]):
             d_relu_layer_2[ch,max_x_pooling_layer_2[ch],max_y_pooling_layer_2[ch]] = d_pooling_layer_2[ch]
 
-            conv_layer_1_pooling_op = layer_1_pooling['pooling_val']
+        conv_layer_1_pooling_op = layer_1_pooling['pooling_val']
             #rotate dell and apply covolution with the previous layer output to get the errors
-            conv_layer_1_pooling_op_shape = conv_layer_1_pooling_op[0].shape
+        conv_layer_1_pooling_op_shape = conv_layer_1_pooling_op[0].shape
 
         rotated_dell = np.flip(np.flip(d_relu_layer_2,-2),-1)
         bias_layer_2_grads = np.sum(rotated_dell,axis=(-1,-2))
@@ -86,8 +90,10 @@ def backpropBodyParllel(self,X_pool,y_pool):
         stacked_kernel_2 = np.flip(np.flip(stacked_kernel_2,-2),-1)
         d_relu_layer_2_reshaped = d_relu_layer_2.reshape((d_relu_layer_2.shape[0],1)+d_relu_layer_2.shape[1:])
 
-        dell_pooled_layer_1 = self.convOpOpti(stacked_kernel_2,d_relu_layer_2_reshaped,stacked_kernel_2.shape[-2:], d_relu_layer_2_reshaped.shape[-2:],-1,convType="full")
-        dell_pooling_layer_1 = dell_pooled_layer_1 * self.reluDerivative(conv_layer_1_pooling_op)
+        dell_pooled_layer_1 = self.convOpOpti(d_relu_layer_2_reshaped,stacked_kernel_2, d_relu_layer_2_reshaped.shape[-2:],stacked_kernel_2.shape[-2:],-1,convType="full")
+        conv_layer_1_pooling_op_non_activated = layer_1_pooling['pooled_non_activated']
+
+        dell_pooling_layer_1 = dell_pooled_layer_1 * self.reluDerivative(conv_layer_1_pooling_op_non_activated)
         #at this point i have all the dell in the maxed_pooled layer now to propogate to layer before it
         X_relu_layer_1 = layer_1_conv_box['relu']
         dell_relu_layer_1 = np.zeros(X_relu_layer_1.shape)
@@ -96,25 +102,27 @@ def backpropBodyParllel(self,X_pool,y_pool):
         for ch in range(dell_relu_layer_1.shape[0]):
             dell_relu_layer_1[ch,max_x_pooling_layer_1[ch],max_y_pooling_layer_1[ch]] = dell_pooling_layer_1[ch]
 
+        bias_layer_1_grads = np.sum(dell_relu_layer_1,axis=(-2,-1))
         #now to get change in weights
         rotated_dell = np.flip(np.flip(dell_relu_layer_1,-2),-1)
-        bias_layer_1_grads = np.sum(rotated_dell,axis=(-1,-2))
+        # bias_layer_1_grads = np.sum(rotated_dell,axis=(-1,-2))
         X_curr_reshaped = X_curr.reshape((1,)+X_curr.shape)
         grads = self.convOpOpti(X_curr_reshaped,rotated_dell,self.input_dim,rotated_dell.shape[-2:],self.filter_size_layer_1)
         grads = np.flip(np.flip(grads,-2),-1)
         kernel_layer_1_grads += grads
 
-        # at this point all the grads are calculated now just to stack it up into 1d array
-        #will stack up in forward fashion
-        all_grads = np.array([])
-        # 1 st conv layer all kernel's biases, all_kernels
-        all_grads = np.concatenate((all_grads,bias_layer_1_grads,kernel_layer_1_grads.flatten()))
-        #2nd conv layer params
-        all_grads = np.concatenate((all_grads,bias_layer_2_grads,np.array(kernel_layer_2_grads).flatten()))
-        #fully connected now
-        all_grads = np.concatenate((all_grads, weight_layer_1_grads.flatten(), weight_layer_2_grads.flatten(),weight_layer_3_grads.flatten()))
-
-
+    # at this point all the grads are calculated now just to stack it up into 1d array
+    #will stack up in forward fashion
+    all_grads = np.array([])
+    # 1 st conv layer all kernel's biases, all_kernels
+    all_grads = np.concatenate((all_grads,bias_layer_1_grads,kernel_layer_1_grads.flatten()))
+    #2nd conv layer params
+    all_grads = np.concatenate((all_grads,bias_layer_2_grads,np.array(kernel_layer_2_grads).flatten()))
+    #fully connected now
+    all_grads = np.concatenate((all_grads, weight_layer_1_grads.flatten(), weight_layer_2_grads.flatten(),weight_layer_3_grads.flatten()))
+    self.gradientCheck("conv_2",X_pool,y_pool,kernel_layer_1_grads.flatten(),bias = bias_layer_1_grads)
+    print "type any char to move forward"
+    raw_input()
     return J, all_grads
 
 
@@ -154,12 +162,14 @@ class CNN:
         self.dropout_percent_layer_2 = params["dropout_percent_layer_2"]["val"]
         self.intermediate_results = {}
         self.count = 0
+        self.losses = []
 
     def train(self):
         #flow
         #train -> gradient descent -> backward_prop -> feed_forward to calculate values
         self.obj = self.obj.process()
-        X_train,y_train = self.obj.X_train, self.obj.y_train
+        X_train,y_train = self.obj.X_train[:100], self.obj.y_train[:100]
+        X_train = np.array([X[0:18,0:18] for X in X_train])
         print len(X_train)
         X_train = self.padBits(X_train,self.n_padding_bits) #will return the all images after padding
         #make random weights i.e filters
@@ -168,9 +178,12 @@ class CNN:
         theta = self.makeThetaVector()
         # print theta, len(theta)
         print "training starting"
-        vals = self.gradientDescent(theta,X_train,y_train)
-        print vals
-        self.fromThetaVectorToWeights(vals.x)
+        # vals = self.gradientDescent(theta,X_train,y_train)
+        n_epochs = params['n_epochs']
+        learning_rate = params['learning_rate']
+        mini_batch_size = params['batch_size']
+        vals = self.MiniBatchGd(theta,X_train,y_train,n_epochs=n_epochs, mini_batch_size=mini_batch_size,learning_rate=learning_rate)
+        self.fromThetaVectorToWeights(vals)
         #pickle the object
 
 
@@ -191,24 +204,26 @@ class CNN:
         #for conv layer box
         self.bias_layer_1 = list(np.random.normal(mean,0.00001,self.n_filter_layer_1)+1)
         #filter values for layer 1
+        l1 = np.sqrt(2.0/np.product(self.filter_size_layer_1))
         for i in range(self.n_filter_layer_1):
-            self.filters_layer_1.append(np.random.normal(mean,std,tuple(self.filter_size_layer_1)))
+            self.filters_layer_1.append(np.random.randn(self.filter_size_layer_1[0],self.filter_size_layer_1[1])*l1)
             #filter values for layer 2
         self.bias_layer_2 = list(np.random.normal(mean,0.00001,self.n_filter_layer_2)+1)
+        l2 = np.sqrt(2.0/np.product(self.filter_size_layer_2))
         for i in range(self.n_filter_layer_2):
-            self.filters_layer_2.append(np.random.normal(mean,std,self.filter_size_layer_2))
+            self.filters_layer_2.append(np.random.randn(self.filter_size_layer_2[0],self.filter_size_layer_2[1],self.filter_size_layer_2[2])*l2)
         #for fully connected layers
         # +1 for bias
         shape_weight_layer_1 = (self.n_nodes_hidden_layer_1,self.out_nodes_after_conv+1)
         shape_weight_layer_2 = (self.n_nodes_hidden_layer_2,self.n_nodes_hidden_layer_1+1)
         shape_weight_layer_3 = (self.output_classes,self.n_nodes_hidden_layer_2+1)
-        self.weights.append(np.random.normal(mean,std,shape_weight_layer_1))
-        self.weights.append(np.random.normal(mean,std,shape_weight_layer_2))
-        self.weights.append(np.random.normal(mean,std,shape_weight_layer_3))
+        self.weights.append((1.0/np.sqrt(self.out_nodes_after_conv/2))*np.random.randn(shape_weight_layer_1[0],shape_weight_layer_1[1]))
+        self.weights.append((1.0/np.sqrt(self.n_nodes_hidden_layer_1/2))*np.random.randn(shape_weight_layer_2[0],shape_weight_layer_2[1]))
+        self.weights.append((1.0/np.sqrt(self.n_nodes_hidden_layer_2/2))*np.random.randn(shape_weight_layer_3[0],shape_weight_layer_3[1]))
 
 
     #this function does a feed forward
-    def feedForward(self, X, y, training=True):
+    def feedForward(self, X, y, training=False, g_check=False):
         #layer 1
         #this is to store intermediate results just for training thing
         layer_1_conv_box = {}
@@ -218,6 +233,10 @@ class CNN:
         layer_1_conv_box["relu"] = X
         layer_1_pooling = {}
         X,max_indexes_x, max_indexes_y = self.maxPooling(X,params["pooling_stride_layer_1"]["val"],params["pooling_filter_size_layer_1"]["val"])
+        pooling_non_activated = np.zeros(X.shape)
+        for ch in range(X.shape[0]):
+            pooling_non_activated[ch] = layer_1_conv_box["convOp"][ch,max_indexes_x[ch],max_indexes_y[ch]]
+        layer_1_pooling['pooled_non_activated'] = pooling_non_activated
         layer_1_pooling["pooling_val"] = X
         layer_1_pooling["max_indexes_x"] = max_indexes_x
         layer_1_pooling["max_indexes_y"] = max_indexes_y
@@ -237,6 +256,7 @@ class CNN:
         # now i have total 22 X 22 X 3 image there total neurons = 1452
         for ch in range(X.shape[0]):
             z0_tensor[ch] =layer_2_conv_box["convOp"][ch,max_indexes_x_layer_2[ch],max_indexes_y_layer_2[ch]]
+
         fully_connected = {}
         fully_connected['z0'] =np.concatenate((np.array([1]),z0_tensor.flatten()))
         #fully connected
@@ -249,22 +269,24 @@ class CNN:
         X = self.flattenLayer(X) #add one as bias
         fully_connected['a1'] = X
         #perform dropout
-        if(training):
-            X = self.dropout(X,self.dropout_percent_layer_1)
+        # if(training):
+        #     X = self.dropout(X,self.dropout_percent_layer_1)
 
         X = self.fullyConnected(X,layer=2)
         fully_connected['z2'] = np.concatenate((np.array([1]),X))
         X = self.relu(X)
         X = self.flattenLayer(X) #add one as bias
         fully_connected['a2'] = X
-        if(training):
-            X = self.dropout(X,self.dropout_percent_layer_2)
+        # if(training):
+        #     X = self.dropout(X,self.dropout_percent_layer_2)
 
         X = self.fullyConnected(X,layer=3)
         fully_connected['z3'] = np.concatenate((np.array([1]),X))
         #now X contains the output now have to just squash the stuff
         X = self.softmax(X)
         fully_connected['a3'] = X
+        if g_check:
+            return X
         return layer_1_conv_box, layer_1_pooling, layer_2_conv_box, layer_2_pooling, fully_connected
 
 
@@ -284,6 +306,7 @@ class CNN:
             #depth = #kernels
             bias = np.array(self.bias_layer_1)
             convolved = self.convOpOpti(X,stacked_kernels,shape,k_shape,self.conv_op_layer_1_out_dim)
+            print convolved.shape, bias.reshape((bias.shape[0],1,1)).shape
             convolved = convolved + bias.reshape((bias.shape[0],1,1))
             return convolved
         #layer 2
@@ -310,6 +333,10 @@ class CNN:
         target = np.fft.ifft2(fft_result).real
 
         if(convType=="full"):
+            print "aaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            print target.shape
+            print "-------------aaaaaaaaaaaaaaaaaaaaaaaaaaa------"
+
             return np.sum(target,axis=0)
 
         start_i = (padded_dim -output_dim ) // 2
@@ -428,11 +455,86 @@ class CNN:
 
         pass
 
+    def gradientCheck(self,layer,X,y,actual,bias=None):
+        epsilon = params['epsilon']
+        if layer== 'conv_2':
+            curr_weight = np.array(self.filters_layer_1)
+            shape = curr_weight.shape
+            flattened = curr_weight.flatten()
+            approx = []
+            approx_bias = []
+            for i in range(len(bias)):
+                J1 = 0
+                J2 = 0
+                self.bias_layer_1[i] =   self.bias_layer_1[i] + epsilon
+                for im in range(len(X)):
+                    a = self.feedForward(X[im],y[im],g_check=True)
+                    J1 += self.softmaxLoss(a,y[im],False)
+                self.bias_layer_1[i] =   self.bias_layer_1[i] - epsilon
+                self.bias_layer_1[i] =   self.bias_layer_1[i] - epsilon
+                for im in range(len(X)):
+                    J2 += self.softmaxLoss(self.feedForward(X[im],y[im],g_check=True),y[im],False)
+                self.bias_layer_1[i] =   self.bias_layer_1[i] + epsilon
+                approx_bias.append((1.0 * (J1-J2))/(2*epsilon))
+
+            for i in range(len(flattened)):
+                J1 = 0
+                J2 = 0
+                flattened[i] = flattened[i] + epsilon
+                self.filters_layer_1 = flattened.reshape((shape))
+                for im in range(len(X)):
+                    a = self.feedForward(X[im],y[im],g_check=True)
+                    # print "got here"
+                    # print a
+                    J1 += self.softmaxLoss(a,y[im],False)
+                flattened[i] = flattened[i] - epsilon #make as the previous
+                flattened[i] = flattened[i] - epsilon #modify
+                self.filters_layer_1 = flattened.reshape((shape))
+                for im in range(len(X)):
+                    J2 += self.softmaxLoss(self.feedForward(X[im],y[im],g_check=True),y[im],False)
+                flattened[i] = flattened[i] + epsilon #modify to previous state
+                approx.append((1.0 * (J1-J2))/(2*epsilon))
+
+
+        print "-------------------------------"
+        print approx_bias
+        print bias
+        print "-------------------------------"
+        approx = np.array(approx)
+        print approx
+        print actual
+        nume = np.linalg.norm(approx-actual)
+        deno = np.linalg.norm(actual) + np.linalg.norm(approx)
+        print "ratio is " +  str(nume/deno)
+
+
+
+
+
+
     def gradientDescent(self,theta,X,y):
         fmin = minimize(fun=self.backprop,x0=theta,args=(X,y),method='L-BFGS-B',jac=True,options={"maxiter":200})
         return fmin
 
+    def MiniBatchGd(self,theta,X,y,n_epochs,mini_batch_size,learning_rate):
+        zipped = zip(X,y)
+        for epoch in xrange(n_epochs):
+            np.random.shuffle(zipped)
+            X,y = zip(*zipped)
+            X = np.array(X)
+            y = np.array(y)
+            loss_total = 0
+            for i in xrange(0,X.shape[0],mini_batch_size):
+                X_mini = X[i:i+mini_batch_size]
+                y_mini = y[i:i+mini_batch_size]
+                grads, loss = self.backprop(theta, X_mini, y_mini)
+                loss_total += loss
+                theta += learning_rate * grads
+            print "iteration "+str(epoch+1)+" loss "+str(loss_total)
 
+            self.losses.append(loss_total)
+
+        return theta
 
     def backprop(self,theta,X,y):
         if self.count%5 == 0:
@@ -440,10 +542,10 @@ class CNN:
             print(str(self.count)+" times the function is called time taken in seconds "+str(time.time()-start) )
             print "-------------------------------------------------------"
         self.count += 1
-        batch_co = np.random.choice(X.shape[0],size=params['batch_size'],replace=False)
-        # X_batch =
-        X = X[batch_co]
-        y = y[batch_co]
+        # batch_co = np.random.choice(X.shape[0],size=params['batch_size'],replace=False)
+        # # X_batch =
+        # X = X[batch_co]
+        # y = y[batch_co]
         #this function will make from one d to weights
         self.fromThetaVectorToWeights(theta) #now all weights loaded in the self object
         J = 0
@@ -458,9 +560,16 @@ class CNN:
 
         #for all image
         pool_size = params['pool_size']
-        num_cores = multiprocessing.cpu_count()
-        ite = [delayed(backpropBodyParllel)(self,X[im:im+pool_size],y[im:im+pool_size]) for im in range(0,len(X),pool_size)]
-        all_return_values = Parallel(n_jobs=num_cores)(ite)
+        # num_cores = multiprocessing.cpu_count()
+        # ite = [delayed(backpropBodyParllel)(self,X[im:im+pool_size],y[im:im+pool_size]) for im in range(0,len(X),pool_size)]
+        # all_return_values = Parallel(n_jobs=num_cores)(ite)
+        print "batch "+str(self.count)
+        all_return_values = []
+        # for im in range(len(X)):
+        print len(X)
+        raw_input()
+        all_return_values.append(backpropBodyParllel(self,X,y))
+
 
         J = 0
         all_grads = np.zeros(all_return_values[0][1].shape)
@@ -469,7 +578,7 @@ class CNN:
             all_grads += all_return_values[i][1]
 
 
-	print "loss "+str(J)+" at iteration "+str(self.count)
+        print "loss "+str(J)+" at iteration "+str(self.count)
 
         return J, all_grads
 
@@ -513,7 +622,12 @@ class CNN:
 
 
     @staticmethod
-    def softmaxLoss(a,y_curr):
+    def softmaxLoss(a,y_curr,prints=True):
+        if prints:
+            print "[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]"
+            print a, y_curr
+            print "[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]"
+
         return np.sum(-y_curr * np.log(a))
 
     @staticmethod

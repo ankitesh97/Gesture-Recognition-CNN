@@ -129,3 +129,46 @@ def backprop(self,theta,X,y):
 
 
     return J, all_grads
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            if layer == 'fully_1':
+                curr_weight = self.weights[0]
+                weight_shape = curr_weight.shape
+                flattened = curr_weight.flatten()
+                approx = []
+                for i in range(len(flattened)):
+                    J1 = 0
+                    J2 = 0
+                    flattened[i] = flattened[i] + epsilon
+                    self.weights[0] = flattened.reshape((weight_shape))
+                    for im in range(len(X)):
+                        a = self.feedForward(X[im],y[im],g_check=True)
+                        # print "got here"
+                        # print a
+                        J1 += self.softmaxLoss(a,y[im],False)
+                    flattened[i] = flattened[i] - epsilon #make as the previous
+                    flattened[i] = flattened[i] - epsilon #modify
+                    self.weights[0] = flattened.reshape((weight_shape))
+                    for im in range(len(X)):
+                        J2 += self.softmaxLoss(self.feedForward(X[im],y[im],g_check=True),y[im],False)
+                    flattened[i] = flattened[i] + epsilon #modify to previous state
+                    approx.append((1.0 * (J1-J2))/(2*epsilon))
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaa

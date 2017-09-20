@@ -45,7 +45,7 @@ class Preprocess():
     def process(self):
         #if the sampled data exists then simply read and return
         try:
-            pickle_file_sampled_data = open('pickle_models/sampled_data3','r')
+            pickle_file_sampled_data = open('pickle_models/sampled_data4','r')
             processed_obj = pickle.load(pickle_file_sampled_data)
             pickle_file_sampled_data.close()
             return processed_obj
@@ -131,10 +131,11 @@ class Preprocess():
         temp_path = []
         for f in os.listdir(path):
             if(f!='y.txt'):
-                img = cv2.imread(path+str(f),cv2.COLOR_BGR2GRAY)
-                ret,binary_img = cv2.threshold(img,120,255,cv2.THRESH_BINARY)
-                binary_img[binary_img==255] = 1 #replace 255 with 1 for easy calc, 1 means white , 0 means black
-                temp_X.append(binary_img)
+                img = cv2.imread(path+str(f),cv2.COLOR_BGR2GRAY).astype(float)
+                img -= np.mean(img)
+                # ret,binary_img = cv2.threshold(img,120,255,cv2.THRESH_BINARY)
+                # binary_img[binary_img==255] = 1 #replace 255 with 1 for easy calc, 1 means white , 0 means black
+                temp_X.append(img)
                 temp_y.append(y_to_append)
                 temp_path.append(path+str(f))
 
@@ -164,7 +165,7 @@ if __name__ == '__main__':
     process_obj = Preprocess()
     obj = process_obj.process()
     if(obj == None):
-        pickle_file_sampled_data = open('pickle_models/sampled_data3','w')
+        pickle_file_sampled_data = open('pickle_models/sampled_data4','w')
         pickle.dump(process_obj,pickle_file_sampled_data)
         pickle_file_sampled_data.close()
     else:
