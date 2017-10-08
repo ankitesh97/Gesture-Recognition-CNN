@@ -39,6 +39,7 @@
   "n_epochs":100,
   "learning_rate":1e-4,
   "pool_size":1,
-  "epsilon":1e-7
+  "epsilon":1e-7,
+  "method":"BFGS"
 
 }
