@@ -6,8 +6,8 @@ from cnn_model import CNN
 import json
 import time
 
-MODEL_FILE = 'pickle_models/cnn_object_3_300_32_filter'
-CLASSES = ["FIST","HAND","ONE","PEACE", "NONE"] #change here if you want to add new gesture
+MODEL_FILE = 'pickle_models/cnn_object_15_'
+CLASSES = ["FIST","HAND","ONE","PEACE"] #change here if you want to add new gesture
 params_file  = open('params.json','r')
 params = json.load(params_file)
 params_file.close()
