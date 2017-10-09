@@ -47,6 +47,8 @@ OpenCv is used for image processing, live video was captured via video camera, t
 
 The final image that was saved was a 50x50 gray scaled image
 
+The images can be found in the images_data folder
+
 #### Images from the dataset
 ![Fist](images_data/fist/70.jpg)  
 **Fist**
