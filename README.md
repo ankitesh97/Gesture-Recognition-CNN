@@ -146,4 +146,5 @@ Below is the figure showing the loss vs iterations curve for the best model
 
 Finally the model was tested on the test set and the **accuracy was 95.06%**
 
-Also the model was tested on live feed of the web cam it was giving impressive results, one peculiar observation was that the model was getting confused between hand and the fist
+Also the model was tested on live feed of the web cam it was giving impressive results, one peculiar observation was that the model was getting confused between hand and the fist.
+Also the model can perform better if the model is trained for more number of iteration (the current model is trained for 100 iterations)
